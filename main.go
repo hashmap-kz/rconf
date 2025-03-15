@@ -20,7 +20,7 @@ type Config struct {
 	User        string
 	PrivateKey  string
 	Scripts     []string
-	Hosts       []string
+	Hosts       []string // TODO: this should be a ConnStr like ssh://user:pass@host:port
 	WorkerLimit int
 	LogFile     string
 }
@@ -32,6 +32,7 @@ var slogger *slog.Logger
 type HostTask struct {
 	User           string
 	Host           string
+	Port           string
 	PrivateKey     string
 	ScriptContents map[string][]byte
 	Results        *sync.Map
@@ -57,7 +58,7 @@ type SSHClient struct {
 }
 
 // NewSSHClient establishes an SSH and SFTP connection.
-func NewSSHClient(user, host, privateKeyPath string) (*SSHClient, error) {
+func NewSSHClient(user, host, port, privateKeyPath string) (*SSHClient, error) {
 	key, err := os.ReadFile(privateKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read private key: %w", err)
@@ -76,7 +77,7 @@ func NewSSHClient(user, host, privateKeyPath string) (*SSHClient, error) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
-	client, err := ssh.Dial("tcp", host+":22", config)
+	client, err := ssh.Dial("tcp", host+":"+port, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial SSH: %w", err)
 	}
@@ -120,6 +121,7 @@ func (s *SSHClient) ExecuteScript(remotePath string) (string, error) {
 	}
 	defer session.Close()
 
+	// TODO: `sudo` should be configured somehow
 	out, err := session.CombinedOutput(fmt.Sprintf("sudo chmod +x %s && sudo %s", remotePath, remotePath))
 	if err != nil {
 		return string(out), fmt.Errorf("failed to execute script: %w", err)
@@ -135,7 +137,7 @@ func ProcessHost(task *HostTask) {
 	defer func() { <-task.Semaphore }()
 
 	fmt.Printf("[HOST: %s] 🔄 Connecting...\n", task.Host)
-	client, err := NewSSHClient(task.User, task.Host, task.PrivateKey)
+	client, err := NewSSHClient(task.User, task.Host, task.Port, task.PrivateKey)
 	if err != nil {
 		slogger.Error("SSH connection failed", slog.String("host", task.Host), slog.Any("error", err))
 		fmt.Printf("[HOST: %s] ❌ SSH connection failed\n", task.Host)
