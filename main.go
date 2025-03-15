@@ -40,13 +40,13 @@ type HostTask struct {
 
 // InitLogger initializes structured logging with slog.
 func InitLogger(logFile string) {
-	file, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	file, err := os.OpenFile(logFile, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		fmt.Println("Failed to open log file:", err)
 		os.Exit(1)
 	}
 	writer := io.MultiWriter(file)
-	slogger = slog.New(slog.NewJSONHandler(writer, nil))
+	slogger = slog.New(slog.NewTextHandler(writer, nil))
 }
 
 // SSHClient wraps an SSH client and SFTP session.
@@ -158,7 +158,7 @@ func ProcessHost(task HostTask) {
 			continue
 		}
 
-		fmt.Printf("[HOST: %s] ⏳ Executing %s...\n", task.Host, script)
+		fmt.Printf("[HOST: %s] 🚀 Executing %s...\n", task.Host, script)
 		output, err := client.ExecuteScript(remotePath)
 		if err != nil {
 			slogger.Error("Execution failed", slog.String("host", task.Host), slog.String("script", script), slog.Any("error", err), slog.String("output", output))
@@ -216,7 +216,7 @@ func Run(cfg Config) {
 func PrintSummary(results *sync.Map) {
 	fmt.Println("\n=== Execution Summary ===")
 	fmt.Println("+----------------+----------------------+")
-	fmt.Println("| HOST | EXECUTION RESULT |")
+	fmt.Println("| HOST           | EXECUTION RESULT     |")
 	fmt.Println("+----------------+----------------------+")
 	results.Range(func(key, value interface{}) bool {
 		fmt.Printf("| %-14s | %-20s |\n", key, value)
