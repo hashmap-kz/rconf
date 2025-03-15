@@ -128,12 +128,12 @@ func (s *SSHClient) ExecuteScript(remotePath string) (string, error) {
 }
 
 // ProcessHost handles script execution on a single host.
-func ProcessHost(task HostTask) {
+func ProcessHost(task *HostTask) {
 	defer task.WG.Done()
 	task.Semaphore <- struct{}{}
 	defer func() { <-task.Semaphore }()
 
-	fmt.Printf("[HOST: %s] Connecting...\n", task.Host)
+	fmt.Printf("[HOST: %s] 🔄 Connecting...\n", task.Host)
 	client, err := NewSSHClient(task.User, task.Host, task.PrivateKey)
 	if err != nil {
 		slogger.Error("SSH connection failed", slog.String("host", task.Host), slog.Any("error", err))
@@ -141,7 +141,10 @@ func ProcessHost(task HostTask) {
 		task.Results.Store(task.Host, "SSH Failed")
 		return
 	}
-	defer client.Close()
+	defer func() {
+		fmt.Printf("[HOST: %s] 🔄 Disconnecting...\n", task.Host)
+		client.Close()
+	}()
 
 	successScripts := []string{}
 	failedScripts := []string{}
@@ -195,7 +198,7 @@ func Run(cfg Config) {
 
 	for _, host := range cfg.Hosts {
 		wg.Add(1)
-		task := HostTask{
+		task := &HostTask{
 			User:           cfg.User,
 			Host:           host,
 			PrivateKey:     cfg.PrivateKey,
@@ -236,7 +239,7 @@ func ReadScriptsIntoMemory(scriptPaths []string) (map[string][]byte, error) {
 		}
 
 		if info.IsDir() {
-			filepath.WalkDir(path, func(subPath string, d os.DirEntry, err error) error {
+			err := filepath.WalkDir(path, func(subPath string, d os.DirEntry, err error) error {
 				if !d.IsDir() && strings.HasSuffix(d.Name(), ".sh") {
 					content, err := os.ReadFile(subPath)
 					if err == nil {
@@ -245,6 +248,9 @@ func ReadScriptsIntoMemory(scriptPaths []string) (map[string][]byte, error) {
 				}
 				return nil
 			})
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			content, err := os.ReadFile(path)
 			if err == nil {
@@ -273,6 +279,11 @@ func main() {
 	rootCmd.Flags().StringSliceVarP(&cfg.Hosts, "hosts", "H", nil, "List of remote hosts (required)")
 	rootCmd.Flags().IntVarP(&cfg.WorkerLimit, "workers", "w", 2, "Max concurrent SSH connections")
 	rootCmd.Flags().StringVarP(&cfg.LogFile, "log", "l", "ssh_execution.log", "Log file path")
+
+	_ = rootCmd.MarkFlagRequired("user")
+	_ = rootCmd.MarkFlagRequired("key")
+	_ = rootCmd.MarkFlagRequired("scripts")
+	_ = rootCmd.MarkFlagRequired("hosts")
 
 	_ = rootCmd.Execute()
 }
