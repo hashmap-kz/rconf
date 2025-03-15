@@ -78,6 +78,11 @@ func NewSSHClient(user, host, port, privateKeyPath string) (*SSHClient, error) {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
+	// TODO: remove after ConnStr is ready
+	if port == "" {
+		port = "22"
+	}
+
 	client, err := ssh.Dial("tcp", host+":"+port, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial SSH: %w", err)
@@ -284,7 +289,7 @@ func main() {
 	var cfg Config
 
 	rootCmd := &cobra.Command{
-		Use:   "ssh-executor",
+		Use:   "rconf",
 		Short: "Execute local scripts on remote hosts via SSH",
 		Run: func(_ *cobra.Command, _ []string) {
 			Run(&cfg)

@@ -2,6 +2,13 @@
 
 **rconf** is a command-line tool that executes local shell-scripts on multiple remote hosts via SSH.
 
+[![License](https://img.shields.io/github/license/hashmap-kz/rconf)](https://github.com/hashmap-kz/rconf/blob/master/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/hashmap-kz/rconf)](https://goreportcard.com/report/github.com/hashmap-kz/rconf)
+[![Workflow Status](https://img.shields.io/github/actions/workflow/status/hashmap-kz/rconf/ci.yml?branch=master)](https://github.com/hashmap-kz/rconf/actions/workflows/ci.yml?query=branch:master)
+[![GitHub Issues](https://img.shields.io/github/issues/hashmap-kz/rconf)](https://github.com/hashmap-kz/rconf/issues)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/hashmap-kz/rconf)](https://github.com/hashmap-kz/rconf/blob/master/go.mod#L3)
+[![Latest Release](https://img.shields.io/github/v/release/hashmap-kz/rconf)](https://github.com/hashmap-kz/rconf/releases/latest)
+
 ---
 
 ## Features
