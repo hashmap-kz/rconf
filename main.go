@@ -182,7 +182,7 @@ func ProcessHost(task *HostTask) {
 }
 
 // Run executes scripts on multiple hosts with concurrency control.
-func Run(cfg Config) {
+func Run(cfg *Config) {
 	InitLogger(cfg.LogFile)
 	scriptContents, err := ReadScriptsIntoMemory(cfg.Scripts)
 	if err != nil {
@@ -190,7 +190,7 @@ func Run(cfg Config) {
 		os.Exit(1)
 	}
 
-	fmt.Println("\n🚀 Starting script execution...\n")
+	fmt.Println("\n🚀 Starting script execution...")
 
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, cfg.WorkerLimit)
@@ -269,7 +269,7 @@ func main() {
 		Use:   "ssh-executor",
 		Short: "Execute local scripts on remote hosts via SSH",
 		Run: func(cmd *cobra.Command, args []string) {
-			Run(cfg)
+			Run(&cfg)
 		},
 	}
 
@@ -285,5 +285,8 @@ func main() {
 	_ = rootCmd.MarkFlagRequired("scripts")
 	_ = rootCmd.MarkFlagRequired("hosts")
 
-	_ = rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
