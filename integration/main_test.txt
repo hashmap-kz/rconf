@@ -1,7 +1,8 @@
-package main
+package integration
 
 import (
 	"fmt"
+	"github.com/hashmap-kz/rconf-v2"
 	"testing"
 	"time"
 
@@ -48,13 +49,13 @@ func TestSSHOperations(t *testing.T) {
 
 	defer pool.Purge(resource)
 
-	var sshClient *SSHClient
+	var sshClient *main.SSHClient
 	time.Sleep(3 * time.Second) // Give the container some time to start
 
 	hostPort := resource.GetPort("22/tcp")
 
 	t.Run("Test Script Upload", func(t *testing.T) {
-		sshClient, err = NewSSHClient("root", "localhost", hostPort, "/root/.ssh/id_ed25519")
+		sshClient, err = main.NewSSHClient("root", "localhost", hostPort, "/root/.ssh/id_ed25519")
 		if err != nil {
 			t.Fatalf("Failed to establish SSH connection: %s", err)
 		}

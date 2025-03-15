@@ -1,4 +1,4 @@
-module github.com/hashmap-kz/rconf-v2
+module github.com/hashmap-kz/rconf
 
 go 1.24.0
 

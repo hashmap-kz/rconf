@@ -1,0 +1,42 @@
+version: 2
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: rconf
+    binary: rconf
+    ldflags:
+      - -s -w
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+checksum:
+  name_template: checksums.txt
+
+archives:
+  - builds:
+      - rconf
+    name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    wrap_in_directory: "false"
+    formats: ["tar.gz"]
+    files:
+      - LICENSE
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

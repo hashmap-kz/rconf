@@ -74,6 +74,7 @@ func NewSSHClient(user, host, port, privateKeyPath string) (*SSHClient, error) {
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(signer),
 		},
+		//nolint:gosec
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
@@ -149,7 +150,6 @@ func ProcessHost(task *HostTask) {
 		client.Close()
 	}()
 
-	successScripts := []string{}
 	failedScripts := []string{}
 
 	for script, content := range task.ScriptContents {
@@ -183,7 +183,6 @@ func ProcessHost(task *HostTask) {
 		}
 
 		fmt.Printf("[HOST: %s] ✅ Successfully executed %s\n", task.Host, script)
-		successScripts = append(successScripts, script)
 	}
 
 	if len(failedScripts) > 0 {
@@ -258,7 +257,7 @@ func ReadScriptsIntoMemory(scriptPaths []string) (map[string][]byte, error) {
 		}
 
 		if info.IsDir() {
-			err := filepath.WalkDir(path, func(subPath string, d os.DirEntry, err error) error {
+			err := filepath.WalkDir(path, func(subPath string, d os.DirEntry, _ error) error {
 				if !d.IsDir() && strings.HasSuffix(d.Name(), ".sh") {
 					content, err := os.ReadFile(subPath)
 					if err == nil {
@@ -299,10 +298,13 @@ func main() {
 	rootCmd.Flags().IntVarP(&cfg.WorkerLimit, "workers", "w", 2, "Max concurrent SSH connections")
 	rootCmd.Flags().StringVarP(&cfg.LogFile, "log", "l", "ssh_execution.log", "Log file path")
 
-	_ = rootCmd.MarkFlagRequired("user")
-	_ = rootCmd.MarkFlagRequired("key")
-	_ = rootCmd.MarkFlagRequired("scripts")
-	_ = rootCmd.MarkFlagRequired("hosts")
+	requiredFlags := []string{"user", "key", "scripts", "hosts"}
+	for _, flag := range requiredFlags {
+		if err := rootCmd.MarkFlagRequired(flag); err != nil {
+			fmt.Printf("Failed to mark '%s' flag as required: %v", flag, err)
+			os.Exit(1)
+		}
+	}
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

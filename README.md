@@ -2,18 +2,43 @@
 
 **rconf** is a command-line tool that executes local shell-scripts on multiple remote hosts via SSH.
 
+---
+
 ## Features
 
-- Execute shell scripts on multiple remote hosts via SSH
+- Execute multiple shell scripts on multiple remote hosts via SSH
+- No complex configs, no intricate YAML, no DSLs - just plain shell and a single binary
 - Concurrent execution with worker limits
 - Structured logging
 - Secure authentication using SSH private keys
 - Automatic script upload and execution
 - Summary table of execution results
 
+---
+
 ## Installation
 
-TODO
+1. Download the latest binary for your platform from
+   the [Releases page](https://github.com/hashmap-kz/rconf/releases).
+2. Place the binary in your system's `PATH` (e.g., `/usr/local/bin`).
+
+### Example installation script for Unix-Based OS _(requirements: tar, curl, jq)_:
+
+```bash
+(
+set -euo pipefail
+
+OS="$(uname | tr '[:upper:]' '[:lower:]')"
+ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')"
+TAG="$(curl -s https://api.github.com/repos/hashmap-kz/rconf/releases/latest | jq -r .tag_name)"
+
+curl -L "https://github.com/hashmap-kz/rconf/releases/download/${TAG}/rconf_${TAG}_${OS}_${ARCH}.tar.gz" |
+tar -xzf - -C /usr/local/bin && \
+chmod +x /usr/local/bin/rconf
+)
+```
+
+---
 
 ## Usage
 
@@ -45,6 +70,8 @@ rconf \
 3. The scripts are uploaded to the remote host's `/tmp/` directory.
 4. The scripts are executed remotely using `sudo`.
 5. Execution results are stored and displayed in a summary table.
+
+---
 
 ## Example Output
 
@@ -79,9 +106,13 @@ HOST            RESULT
 10.40.240.193  Success
 ```
 
+---
+
 ## Logging
 
 All execution details, including errors, are logged to the specified log file (`ssh_execution.log`).
+
+---
 
 ## Requirements
 
@@ -89,13 +120,19 @@ All execution details, including errors, are logged to the specified log file (`
 - SSH access to remote hosts
 - Scripts must be shell scripts (`.sh`)
 
-## License
+---
 
-TODO
+## **Contributing**
 
-## Contributing
+We welcome contributions! To contribute: see the [Contribution](CONTRIBUTING.md) guidelines.
 
-TODO
+---
+
+## **License**
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+---
 
 ## TODO
 
