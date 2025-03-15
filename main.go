@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashmap-kz/go-texttable/pkg/table"
 	"github.com/pkg/sftp"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
@@ -155,7 +156,11 @@ func ProcessHost(task *HostTask) {
 
 		err := client.UploadScript(content, remotePath)
 		if err != nil {
-			slogger.Error("Failed to upload script", slog.String("host", task.Host), slog.String("script", script), slog.Any("error", err))
+			slogger.Error("Failed to upload script",
+				slog.String("host", task.Host),
+				slog.String("script", script),
+				slog.Any("error", err),
+			)
 			fmt.Printf("[HOST: %s] ❌ Upload failed for %s\n", task.Host, script)
 			failedScripts = append(failedScripts, script)
 			continue
@@ -164,7 +169,12 @@ func ProcessHost(task *HostTask) {
 		fmt.Printf("[HOST: %s] 🚀 Executing %s...\n", task.Host, script)
 		output, err := client.ExecuteScript(remotePath)
 		if err != nil {
-			slogger.Error("Execution failed", slog.String("host", task.Host), slog.String("script", script), slog.Any("error", err), slog.String("output", output))
+			slogger.Error("Execution failed",
+				slog.String("host", task.Host),
+				slog.String("script", script),
+				slog.Any("error", err),
+				slog.String("output", output),
+			)
 			fmt.Printf("[HOST: %s] ❌ Execution failed for %s\n", task.Host, script)
 			failedScripts = append(failedScripts, script)
 			continue
@@ -215,17 +225,24 @@ func Run(cfg *Config) {
 	PrintSummary(results)
 }
 
-// PrintSummary prints the execution results in a simple table format.
+// PrintSummary prints the execution results in a well-formatted table using tabwriter.
 func PrintSummary(results *sync.Map) {
 	fmt.Println("\n=== Execution Summary ===")
-	fmt.Println("+----------------+----------------------+")
-	fmt.Println("| HOST           | EXECUTION RESULT     |")
-	fmt.Println("+----------------+----------------------+")
+
+	tbl := table.NewTextTable()
+	tbl.DefineColumn("HOST", table.LEFT, table.LEFT)
+	tbl.DefineColumn("RESULT", table.RIGHT, table.RIGHT)
+
+	// Iterate over results and print each row
 	results.Range(func(key, value interface{}) bool {
-		fmt.Printf("| %-14s | %-20s |\n", key, value)
+		tbl.InsertAllAndFinishRow(
+			fmt.Sprintf("%v", key),
+			fmt.Sprintf("%v", value),
+		)
 		return true
 	})
-	fmt.Println("+----------------+----------------------+")
+
+	fmt.Println(tbl.Print())
 }
 
 // ReadScriptsIntoMemory reads all scripts (including from directories) before execution and stores their contents.
@@ -268,7 +285,7 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   "ssh-executor",
 		Short: "Execute local scripts on remote hosts via SSH",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			Run(&cfg)
 		},
 	}
