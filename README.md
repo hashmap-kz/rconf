@@ -178,14 +178,3 @@ We welcome contributions! To contribute: see the [Contribution](CONTRIBUTING.md)
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ---
-
-## TODO
-
-- [V] Support for `ssh://user:pass@host:port` connection strings
-- [V] Support for password authentication
-- Configurable `sudo` behavior
-- Parallel execution optimizations (retry/timeout/ctx, etc...)
-- [V]Integration tests
-- [V] github-actions (CI, release, etc...)
-- [V] Collect scripts: files, directories (+ --recursive), URLs
-- [V] Formatted output (host/port/user, etc...)
