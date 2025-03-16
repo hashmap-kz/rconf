@@ -9,11 +9,10 @@ import (
 	"strings"
 	"sync"
 
-	rconf "github.com/hashmap-kz/rconf/internal/client"
 	"github.com/hashmap-kz/rconf/internal/cmd"
 	"github.com/hashmap-kz/rconf/internal/connstr"
-	"github.com/hashmap-kz/rconf/internal/remote"
 	"github.com/hashmap-kz/rconf/internal/resolver"
+	rconf "github.com/hashmap-kz/rconf/internal/sshclient"
 )
 
 // Structured logger
@@ -197,7 +196,7 @@ func ReadScriptsIntoMemory(scriptPaths []string, recursive bool) (map[string][]b
 	}
 	for _, f := range files {
 		if resolver.IsURL(f) {
-			data, err := remote.ReadRemoteFileContent(f)
+			data, err := resolver.ReadRemoteFileContent(f)
 			if err != nil {
 				return nil, err
 			}
