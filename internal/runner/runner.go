@@ -56,7 +56,7 @@ func Run(cfg *cmd.Config) error {
 	for _, connStr := range cfg.ConnStrings {
 		connInfo, err := connstr.ParseConnectionString(connStr)
 		if err != nil {
-			slogger.Error("Failed to read conninfo", slog.Any("error", err))
+			slogger.Error("Failed to read conn-info", slog.Any("error", err))
 			return err
 		}
 		task := &HostTask{
@@ -138,7 +138,7 @@ func processHost(task *HostTask) {
 
 	for script, content := range task.ScriptContents {
 		remotePath := fmt.Sprintf("/tmp/%s", filepath.Base(script))
-		fmt.Printf("[HOST: %s] ⏳ Uploading %s...\n", hostInfoLog, script)
+		fmt.Printf("[HOST: %s] ⏳ Uploading %s...\n", hostInfoLog, filepath.ToSlash(script))
 
 		err := client.UploadScript(content, remotePath)
 		if err != nil {
@@ -147,26 +147,26 @@ func processHost(task *HostTask) {
 				slog.String("script", script),
 				slog.Any("error", err),
 			)
-			fmt.Printf("[HOST: %s] ❌ Upload failed for %s\n", hostInfoLog, script)
+			fmt.Printf("[HOST: %s] ❌ Upload failed for %s\n", hostInfoLog, filepath.ToSlash(script))
 			failedScripts = append(failedScripts, script)
 			continue
 		}
 
-		fmt.Printf("[HOST: %s] 🚀 Executing %s...\n", hostInfoLog, script)
+		fmt.Printf("[HOST: %s] 🚀 Executing %s...\n", hostInfoLog, filepath.ToSlash(script))
 		output, err := client.ExecuteScript(remotePath)
 		if err != nil {
 			slogger.Error("Execution failed",
 				slog.String("host", hostInfoLog),
-				slog.String("script", script),
+				slog.String("script", filepath.ToSlash(script)),
 				slog.Any("error", err),
 				slog.String("output", output),
 			)
-			fmt.Printf("[HOST: %s] ❌ Execution failed for %s\n", hostInfoLog, script)
-			failedScripts = append(failedScripts, script)
+			fmt.Printf("[HOST: %s] ❌ Execution failed for %s\n", hostInfoLog, filepath.ToSlash(script))
+			failedScripts = append(failedScripts, filepath.ToSlash(script))
 			continue
 		}
 
-		fmt.Printf("[HOST: %s] ✅ Successfully executed %s\n", hostInfoLog, script)
+		fmt.Printf("[HOST: %s] ✅ Successfully executed %s\n", hostInfoLog, filepath.ToSlash(script))
 	}
 
 	if len(failedScripts) > 0 {
