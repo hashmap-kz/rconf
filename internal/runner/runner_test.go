@@ -37,5 +37,6 @@ func TestRunner(t *testing.T) {
 		WorkerLimit:    2,
 	}
 
-	Run(&config)
+	err = Run(&config)
+	assert.NoError(t, err)
 }

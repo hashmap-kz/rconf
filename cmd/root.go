@@ -16,8 +16,8 @@ func Execute() error {
 	rootCmd := &cobra.Command{
 		Use:   "rconf",
 		Short: "Execute local scripts on remote hosts via SSH",
-		Run: func(_ *cobra.Command, _ []string) {
-			runner.Run(&cfg)
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runner.Run(&cfg)
 		},
 	}
 

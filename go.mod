@@ -3,7 +3,6 @@ module github.com/hashmap-kz/rconf
 go 1.24.0
 
 require (
-	github.com/hashmap-kz/go-texttable v1.0.1
 	github.com/pkg/sftp v1.13.8
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.9.0

@@ -184,8 +184,8 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 - [V] Support for `ssh://user:pass@host:port` connection strings
 - [V] Support for password authentication
 - Configurable `sudo` behavior
-- Parallel execution optimizations
+- Parallel execution optimizations (retry/timeout/ctx, etc...)
 - [V]Integration tests
 - [V] github-actions (CI, release, etc...)
 - [V] Collect scripts: files, directories (+ --recursive), URLs
-- Formatted output (host/port/user, etc...)
+- [V] Formatted output (host/port/user, etc...)

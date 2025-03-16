@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashmap-kz/go-texttable/pkg/table"
 	rconf "github.com/hashmap-kz/rconf/internal/client"
 	"github.com/hashmap-kz/rconf/internal/cmd"
 	"github.com/hashmap-kz/rconf/internal/connstr"
@@ -52,7 +51,9 @@ func ProcessHost(task *HostTask) {
 	task.semaphore <- struct{}{}
 	defer func() { <-task.semaphore }()
 
-	fmt.Printf("[HOST: %s] 🔄 Connecting...\n", task.Host)
+	hostInfoLog := fmt.Sprintf("%s:%s", task.Host, task.Port)
+
+	fmt.Printf("[HOST: %s] 🔄 Connecting...\n", hostInfoLog)
 	client, err := rconf.NewSSHClient(connstr.ConnInfo{
 		User:     task.User,
 		Password: task.Password,
@@ -60,13 +61,13 @@ func ProcessHost(task *HostTask) {
 		Port:     task.Port,
 	}, task.PrivateKeyPath, task.PrivateKeyPassphrase)
 	if err != nil {
-		slogger.Error("SSH connection failed", slog.String("host", task.Host), slog.Any("error", err))
-		fmt.Printf("[HOST: %s] ❌ SSH connection failed\n", task.Host)
-		task.Results.Store(task.Host, "SSH Failed")
+		slogger.Error("SSH connection failed", slog.String("host", hostInfoLog), slog.Any("error", err))
+		fmt.Printf("[HOST: %s] ❌ SSH connection failed\n", hostInfoLog)
+		task.Results.Store(hostInfoLog, "SSH Failed")
 		return
 	}
 	defer func() {
-		fmt.Printf("[HOST: %s] 🔄 Disconnecting...\n", task.Host)
+		fmt.Printf("[HOST: %s] 🔄 Disconnecting...\n", hostInfoLog)
 		client.Close()
 	}()
 
@@ -74,41 +75,41 @@ func ProcessHost(task *HostTask) {
 
 	for script, content := range task.ScriptContents {
 		remotePath := fmt.Sprintf("/tmp/%s", filepath.Base(script))
-		fmt.Printf("[HOST: %s] ⏳ Uploading %s...\n", task.Host, script)
+		fmt.Printf("[HOST: %s] ⏳ Uploading %s...\n", hostInfoLog, script)
 
 		err := client.UploadScript(content, remotePath)
 		if err != nil {
 			slogger.Error("Failed to upload script",
-				slog.String("host", task.Host),
+				slog.String("host", hostInfoLog),
 				slog.String("script", script),
 				slog.Any("error", err),
 			)
-			fmt.Printf("[HOST: %s] ❌ Upload failed for %s\n", task.Host, script)
+			fmt.Printf("[HOST: %s] ❌ Upload failed for %s\n", hostInfoLog, script)
 			failedScripts = append(failedScripts, script)
 			continue
 		}
 
-		fmt.Printf("[HOST: %s] 🚀 Executing %s...\n", task.Host, script)
+		fmt.Printf("[HOST: %s] 🚀 Executing %s...\n", hostInfoLog, script)
 		output, err := client.ExecuteScript(remotePath)
 		if err != nil {
 			slogger.Error("Execution failed",
-				slog.String("host", task.Host),
+				slog.String("host", hostInfoLog),
 				slog.String("script", script),
 				slog.Any("error", err),
 				slog.String("output", output),
 			)
-			fmt.Printf("[HOST: %s] ❌ Execution failed for %s\n", task.Host, script)
+			fmt.Printf("[HOST: %s] ❌ Execution failed for %s\n", hostInfoLog, script)
 			failedScripts = append(failedScripts, script)
 			continue
 		}
 
-		fmt.Printf("[HOST: %s] ✅ Successfully executed %s\n", task.Host, script)
+		fmt.Printf("[HOST: %s] ✅ Successfully executed %s\n", hostInfoLog, script)
 	}
 
 	if len(failedScripts) > 0 {
-		task.Results.Store(task.Host, fmt.Sprintf("Failed: %s", strings.Join(failedScripts, ", ")))
+		task.Results.Store(hostInfoLog, fmt.Sprintf("❌ Failed: %s", strings.Join(failedScripts, ", ")))
 	} else {
-		task.Results.Store(task.Host, "Success")
+		task.Results.Store(hostInfoLog, "✅ Success")
 	}
 }
 
@@ -122,14 +123,14 @@ func checkConfigDefaults(cfg *cmd.Config) {
 }
 
 // Run executes scripts on multiple hosts with concurrency control.
-func Run(cfg *cmd.Config) {
+func Run(cfg *cmd.Config) error {
 	checkConfigDefaults(cfg)
 	InitLogger(cfg.LogFile)
 
 	scriptContents, err := ReadScriptsIntoMemory(cfg.Filenames, cfg.Recursive)
 	if err != nil {
 		slogger.Error("Failed to read scripts", slog.Any("error", err))
-		os.Exit(1)
+		return err
 	}
 
 	fmt.Println("\n🚀 Starting script execution...")
@@ -145,7 +146,7 @@ func Run(cfg *cmd.Config) {
 		connInfo, err := connstr.ParseConnectionString(connStr)
 		if err != nil {
 			slogger.Error("Failed to read conninfo", slog.Any("error", err))
-			os.Exit(1)
+			return err
 		}
 		task := &HostTask{
 			User:                 connInfo.User,
@@ -172,26 +173,18 @@ func Run(cfg *cmd.Config) {
 	wg.Wait()
 
 	PrintSummary(results)
+	return nil
 }
 
 // PrintSummary prints the execution results in a well-formatted table using tabwriter.
 func PrintSummary(results *sync.Map) {
 	fmt.Println("\n=== Execution Summary ===")
 
-	tbl := table.NewTextTable()
-	tbl.DefineColumn("HOST", table.LEFT, table.LEFT)
-	tbl.DefineColumn("RESULT", table.RIGHT, table.RIGHT)
-
 	// Iterate over results and print each row
 	results.Range(func(key, value interface{}) bool {
-		tbl.InsertAllAndFinishRow(
-			fmt.Sprintf("%v", key),
-			fmt.Sprintf("%v", value),
-		)
+		fmt.Printf("%v %v\n", key, value)
 		return true
 	})
-
-	fmt.Println(tbl.Print())
 }
 
 // ReadScriptsIntoMemory reads all scripts (including from directories) before execution and stores their contents.
