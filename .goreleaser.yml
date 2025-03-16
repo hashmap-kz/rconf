@@ -57,3 +57,21 @@ brews:
       bin.install "rconf"
     test: |
       system "#{bin}/rconf"
+
+nfpms:
+  - file_name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    maintainer: alexey.zh
+    homepage: "https://github.com/hashmap-kz/rconf"
+    description: "Execute multiple shell scripts on multiple remote hosts via SSH"
+    license: "Apache-2.0"
+    formats:
+      - deb
+      - rpm
+      - apk
+    bindir: /usr/bin
+    section: utils
+    contents:
+      - src: ./LICENSE
+        dst: /usr/share/doc/rconf/copyright
+        file_info:
+          mode: 0644
