@@ -11,6 +11,18 @@
 
 ---
 
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+    - [Manual Installation](#manual-installation)
+    - [Homebrew installation](#homebrew-installation)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
 ## Features
 
 - Execute multiple shell scripts on multiple remote hosts via SSH
@@ -25,11 +37,13 @@
 
 ## Installation
 
+### Manual Installation
+
 1. Download the latest binary for your platform from
    the [Releases page](https://github.com/hashmap-kz/rconf/releases).
 2. Place the binary in your system's `PATH` (e.g., `/usr/local/bin`).
 
-### Example installation script for Unix-Based OS _(requirements: tar, curl, jq)_:
+#### Example installation script for Unix-Based OS _(requirements: tar, curl, jq)_:
 
 ```bash
 (
@@ -43,6 +57,13 @@ curl -L "https://github.com/hashmap-kz/rconf/releases/download/${TAG}/rconf_${TA
 tar -xzf - -C /usr/local/bin && \
 chmod +x /usr/local/bin/rconf
 )
+```
+
+### Homebrew installation
+
+```bash
+brew tap hashmap-kz/rconf
+brew install rconf
 ```
 
 ---
@@ -66,9 +87,9 @@ rconf \
 |---------------|-------|---------------------------------------------------------------------------|
 | `--pkey`      | `-i`  | Path to SSH private key (required)                                        |
 | `--pkey-pass` |       | Passphrase to SSH private key (required when pkey is password-protected)  |
-| `--filename`  | `-f`  | Comma-separated list of script paths or directories (required)            |
+| `--filename`  | `-f`  | Comma-separated list of script paths, directories or URL's (required)     |
 | `--conn`      | `-H`  | Comma-separated list of remote hosts (required).                          |
-|               |       | Format: username:password@host:port                                       |
+|               |       | Format: `username:password@host:port`                                     |
 |               |       | Password and Port are optional                                            |
 | `--recursive` | `-R`  | "Process the directory used in -f, --filename recursively (default: true) |
 | `--workers`   | `-w`  | Maximum concurrent SSH connections (default: 2)                           |

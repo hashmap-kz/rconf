@@ -30,7 +30,7 @@ archives:
       - rconf
     name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
     wrap_in_directory: "false"
-    formats: ["tar.gz"]
+    formats: [ "tar.gz" ]
     files:
       - LICENSE
 
@@ -40,3 +40,20 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+
+brews:
+  - name: rconf
+    repository:
+      owner: hashmap-kz
+      name: homebrew-tap
+      branch: main
+    commit_author:
+      name: alexey.zh
+      email: mailbox.stdio@gmail.com
+    homepage: https://github.com/hashmap-kz/homebrew-tap
+    description: "Execute multiple shell scripts on multiple remote hosts via SSH"
+    license: "Apache-2.0"
+    install: |
+      bin.install "rconf"
+    test: |
+      system "#{bin}/rconf"
