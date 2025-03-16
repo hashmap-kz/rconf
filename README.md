@@ -154,6 +154,20 @@ All execution details, including errors, are logged to the specified log file (`
 
 ---
 
+## Design notes
+
+The goal is to keep everything as simple as possible.
+
+If you have a bunch of shell scripts and need to run them on multiple remote hosts - whether or not you're using a CI/CD
+tool - rconf has you covered.
+
+No complex setup, no tricky configurations.
+
+Got a fleet of VMs and just need to tweak something across all of them? Skip the messy YAML and dependency
+headaches - just run your commands remotely with ease. 
+
+---
+
 ## **Contributing**
 
 We welcome contributions! To contribute: see the [Contribution](CONTRIBUTING.md) guidelines.
