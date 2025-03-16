@@ -51,24 +51,28 @@ chmod +x /usr/local/bin/rconf
 
 ```sh
 rconf \
-  --user myuser \
-  --key /path/to/private_key \
-  --scripts /path/to/script1.sh,/path/to/script-dir/ \
-  --hosts 10.40.240.193,10.40.240.189 \
+  --pkey /path/to/private_key \
+  --filename /path/to/script1.sh,/path/to/script-dir/ \
+  --filename https://shared.company.com/path/to/script.sh \
+  --conn backup@10.40.240.193 \
+  --conn myuser@10.40.240.189:2222 \
   --workers 5 \
   --log execution.log
 ```
 
 ### Flags
 
-| Flag        | Short | Description                                                    |
-|-------------|-------|----------------------------------------------------------------|
-| `--user`    | `-u`  | SSH username (required)                                        |
-| `--key`     | `-k`  | Path to SSH private key (required)                             |
-| `--scripts` | `-s`  | Comma-separated list of script paths or directories (required) |
-| `--hosts`   | `-H`  | Comma-separated list of remote hosts (required)                |
-| `--workers` | `-w`  | Maximum concurrent SSH connections (default: 2)                |
-| `--log`     | `-l`  | Log file path (default: `ssh_execution.log`)                   |
+| Flag          | Short | Description                                                               |
+|---------------|-------|---------------------------------------------------------------------------|
+| `--pkey`      | `-i`  | Path to SSH private key (required)                                        |
+| `--pkey-pass` |       | Passphrase to SSH private key (required when pkey is password-protected)  |
+| `--filename`  | `-f`  | Comma-separated list of script paths or directories (required)            |
+| `--conn`      | `-H`  | Comma-separated list of remote hosts (required).                          |
+|               |       | Format: username:password@host:port                                       |
+|               |       | Password and Port are optional                                            |
+| `--recursive` | `-R`  | "Process the directory used in -f, --filename recursively (default: true) |
+| `--workers`   | `-w`  | Maximum concurrent SSH connections (default: 2)                           |
+| `--log`       | `-l`  | Log file path (default: `ssh_execution.log`)                              |
 
 ## How It Works
 
@@ -143,10 +147,11 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## TODO
 
-- Support for `ssh://user:pass@host:port` connection strings
-- Support for password authentication
+- [V] Support for `ssh://user:pass@host:port` connection strings
+- [V] Support for password authentication
 - Configurable `sudo` behavior
 - Parallel execution optimizations
 - Integration tests
-- github-actions (CI, release, etc...)
+- [V] github-actions (CI, release, etc...)
+- [V] Collect scripts: files, directories (+ --recursive), URLs
 
