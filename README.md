@@ -153,5 +153,5 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 - Parallel execution optimizations
 - Integration tests
 - [V] github-actions (CI, release, etc...)
-- Collect scripts: files, directories (+ --recursive), URLs
+- [V] Collect scripts: files, directories (+ --recursive), URLs
 
