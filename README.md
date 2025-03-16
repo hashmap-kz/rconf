@@ -148,7 +148,6 @@ All execution details, including errors, are logged to the specified log file (`
 
 ## Requirements
 
-- Go 1.18+
 - SSH access to remote hosts
 - Scripts must be shell scripts (`.sh`)
 
