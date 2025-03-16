@@ -53,6 +53,7 @@ chmod +x /usr/local/bin/rconf
 rconf \
   --pkey /path/to/private_key \
   --filename /path/to/script1.sh,/path/to/script-dir/ \
+  --filename https://shared.company.com/path/to/script.sh \
   --conn backup@10.40.240.193 \
   --conn myuser@10.40.240.189:2222 \
   --workers 5 \
