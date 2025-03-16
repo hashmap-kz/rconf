@@ -35,7 +35,7 @@ Format: username:password@host:port
 	rootCmd.Flags().StringVarP(&cfg.LogFile, "log", "l", "ssh_execution.log", "Log file path")
 	rootCmd.Flags().BoolVarP(&cfg.Recursive, "recursive", "R", true, "Process the directory used in -f, --filename recursively")
 
-	requiredFlags := []string{"scripts", "hosts"}
+	requiredFlags := []string{"filename", "conn"}
 	for _, flag := range requiredFlags {
 		if err := rootCmd.MarkFlagRequired(flag); err != nil {
 			fmt.Printf("Failed to mark '%s' flag as required: %v", flag, err)
