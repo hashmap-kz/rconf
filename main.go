@@ -9,6 +9,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashmap-kz/rconf/internal/remote"
+	"github.com/hashmap-kz/rconf/internal/resolver"
+
 	"github.com/hashmap-kz/rconf/internal/connstr"
 	"github.com/hashmap-kz/rconf/internal/rconf"
 
@@ -18,12 +21,13 @@ import (
 
 // Config holds SSH execution details.
 type Config struct {
-	Scripts              []string
-	Hosts                []string // ssh://user:pass@host:port
+	Filenames            []string
+	ConnStrings          []string // ssh://user:pass@host:port
 	PrivateKeyPath       string
 	PrivateKeyPassphrase string
 	WorkerLimit          int
 	LogFile              string
+	Recursive            bool
 }
 
 // Structured logger
@@ -124,7 +128,7 @@ func ProcessHost(task *HostTask) {
 // Run executes scripts on multiple hosts with concurrency control.
 func Run(cfg *Config) {
 	InitLogger(cfg.LogFile)
-	scriptContents, err := ReadScriptsIntoMemory(cfg.Scripts)
+	scriptContents, err := ReadScriptsIntoMemory(cfg.Filenames, cfg.Recursive)
 	if err != nil {
 		slogger.Error("Failed to read scripts", slog.Any("error", err))
 		os.Exit(1)
@@ -138,8 +142,8 @@ func Run(cfg *Config) {
 
 	// prepare tasks
 
-	tasks := make([]*HostTask, 0, len(cfg.Hosts))
-	for _, connStr := range cfg.Hosts {
+	tasks := make([]*HostTask, 0, len(cfg.ConnStrings))
+	for _, connStr := range cfg.ConnStrings {
 		connInfo, err := connstr.ParseConnectionString(connStr)
 		if err != nil {
 			slogger.Error("Failed to read conninfo", slog.Any("error", err))
@@ -193,35 +197,29 @@ func PrintSummary(results *sync.Map) {
 }
 
 // ReadScriptsIntoMemory reads all scripts (including from directories) before execution and stores their contents.
-func ReadScriptsIntoMemory(scriptPaths []string) (map[string][]byte, error) {
+func ReadScriptsIntoMemory(scriptPaths []string, recursive bool) (map[string][]byte, error) {
 	scriptContents := make(map[string][]byte)
 
-	for _, path := range scriptPaths {
-		info, err := os.Stat(path)
-		if err != nil {
-			return nil, fmt.Errorf("failed to stat %s: %w", path, err)
-		}
-
-		if info.IsDir() {
-			err := filepath.WalkDir(path, func(subPath string, d os.DirEntry, _ error) error {
-				if !d.IsDir() && strings.HasSuffix(d.Name(), ".sh") {
-					content, err := os.ReadFile(subPath)
-					if err == nil {
-						scriptContents[subPath] = content
-					}
-				}
-				return nil
-			})
+	files, err := resolver.ResolveAllFiles(scriptPaths, recursive)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		if resolver.IsURL(f) {
+			data, err := remote.ReadRemoteFileContent(f)
 			if err != nil {
 				return nil, err
 			}
+			scriptContents[f] = data
 		} else {
-			content, err := os.ReadFile(path)
-			if err == nil {
-				scriptContents[path] = content
+			data, err := os.ReadFile(f)
+			if err != nil {
+				return nil, err
 			}
+			scriptContents[f] = data
 		}
 	}
+
 	return scriptContents, nil
 }
 
@@ -239,8 +237,8 @@ func main() {
 
 	rootCmd.Flags().StringVarP(&cfg.PrivateKeyPath, "pkey", "i", "", "Path to SSH private key (required when pkey-auth is used)")
 	rootCmd.Flags().StringVarP(&cfg.PrivateKeyPassphrase, "pkey-pass", "", "", "Passphrase to SSH private key (required when pkey is password-protected)")
-	rootCmd.Flags().StringSliceVarP(&cfg.Scripts, "scripts", "s", nil, "List of script paths or directories (required)")
-	rootCmd.Flags().StringSliceVarP(&cfg.Hosts, "hosts", "H", nil, strings.TrimSpace(`
+	rootCmd.Flags().StringSliceVarP(&cfg.Filenames, "filename", "f", nil, "List of script paths or directories (required)")
+	rootCmd.Flags().StringSliceVarP(&cfg.ConnStrings, "conn", "H", nil, strings.TrimSpace(`
 List of remote hosts (required)
 Format: username:password@host:port
 - password is optional
@@ -248,6 +246,7 @@ Format: username:password@host:port
 `))
 	rootCmd.Flags().IntVarP(&cfg.WorkerLimit, "workers", "w", 2, "Max concurrent SSH connections")
 	rootCmd.Flags().StringVarP(&cfg.LogFile, "log", "l", "ssh_execution.log", "Log file path")
+	rootCmd.Flags().BoolVarP(&cfg.Recursive, "recursive", "R", true, "Process the directory used in -f, --filename recursively")
 
 	requiredFlags := []string{"scripts", "hosts"}
 	for _, flag := range requiredFlags {
