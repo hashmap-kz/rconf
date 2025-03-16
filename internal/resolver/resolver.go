@@ -83,12 +83,12 @@ func IsURL(s string) bool {
 	return err == nil && u.Scheme != "" && u.Host != ""
 }
 
-func ignoreFile(path string, extensions []string) bool {
-	if len(extensions) == 0 {
+func ignoreFile(path string, allowedExtensions []string) bool {
+	if len(allowedExtensions) == 0 {
 		return false
 	}
 	ext := filepath.Ext(path)
-	for _, s := range extensions {
+	for _, s := range allowedExtensions {
 		if s == ext {
 			return false
 		}
