@@ -112,9 +112,20 @@ func ProcessHost(task *HostTask) {
 	}
 }
 
+func checkConfigDefaults(cfg *cmd.Config) {
+	if cfg.LogFile == "" {
+		cfg.LogFile = "rconf.log"
+	}
+	if cfg.WorkerLimit <= 0 {
+		cfg.WorkerLimit = 2
+	}
+}
+
 // Run executes scripts on multiple hosts with concurrency control.
 func Run(cfg *cmd.Config) {
+	checkConfigDefaults(cfg)
 	InitLogger(cfg.LogFile)
+
 	scriptContents, err := ReadScriptsIntoMemory(cfg.Filenames, cfg.Recursive)
 	if err != nil {
 		slogger.Error("Failed to read scripts", slog.Any("error", err))

@@ -163,7 +163,7 @@ tool - rconf has you covered.
 No complex setup, no tricky configurations.
 
 Got a fleet of VMs and just need to tweak something across all of them? Skip the messy YAML and dependency
-headaches - just run your commands remotely with ease. 
+headaches - just run your commands remotely with ease.
 
 ---
 
@@ -185,7 +185,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 - [V] Support for password authentication
 - Configurable `sudo` behavior
 - Parallel execution optimizations
-- Integration tests
+- [V]Integration tests
 - [V] github-actions (CI, release, etc...)
 - [V] Collect scripts: files, directories (+ --recursive), URLs
-
+- Formatted output (host/port/user, etc...)

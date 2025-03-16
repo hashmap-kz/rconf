@@ -31,7 +31,7 @@ Format: username:password@host:port
 - port is optional (default 22)
 `))
 	rootCmd.Flags().IntVarP(&cfg.WorkerLimit, "workers", "w", 2, "Max concurrent SSH connections")
-	rootCmd.Flags().StringVarP(&cfg.LogFile, "log", "l", "ssh_execution.log", "Log file path")
+	rootCmd.Flags().StringVarP(&cfg.LogFile, "log", "l", "rconf.log", "Log file path")
 	rootCmd.Flags().BoolVarP(&cfg.Recursive, "recursive", "R", true, "Process the directory used in -f, --filename recursively")
 
 	requiredFlags := []string{"filename", "conn"}

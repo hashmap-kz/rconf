@@ -1,1 +1,0 @@
-docker run -p 2323:22 mailboxsq7/ubuntu-sshd
