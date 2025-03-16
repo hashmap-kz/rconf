@@ -44,7 +44,7 @@ compose-teardown:
 # Run integration tests
 .PHONY: test-integration
 test-integration: compose-setup
-	RCONF_INTEGRATION_TESTS_AVAILABLE=0xcafebabe go test -v internal/runner/*.go
+	RCONF_INTEGRATION_TESTS_AVAILABLE=0xcafebabe go test -v ./...
 	$(MAKE) compose-teardown
 
 # Lint the code
