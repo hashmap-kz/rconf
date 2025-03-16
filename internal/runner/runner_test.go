@@ -8,14 +8,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO: this should be configured in a Makefile
 const (
-	integrationTestsAvailable = true
-	sshPrivateKey             = "../../integration/id_ed25519"
+	sshPrivateKey       = "../../integration/id_ed25519"
+	integrationTestEnv  = "RCONF_INTEGRATION_TESTS_AVAILABLE"
+	integrationTestFlag = "0xcafebabe"
 )
 
 func TestRunner(t *testing.T) {
-	if !integrationTestsAvailable {
+	if os.Getenv(integrationTestEnv) != integrationTestFlag {
+		t.Log("integration test was skipped due to configuration")
 		return
 	}
 
