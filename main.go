@@ -9,20 +9,21 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashmap-kz/rconf/internal/connstr"
+	"github.com/hashmap-kz/rconf/internal/rconf"
+
 	"github.com/hashmap-kz/go-texttable/pkg/table"
-	"github.com/pkg/sftp"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh"
 )
 
 // Config holds SSH execution details.
 type Config struct {
-	User        string
-	PrivateKey  string
-	Scripts     []string
-	Hosts       []string // TODO: this should be a ConnStr like ssh://user:pass@host:port
-	WorkerLimit int
-	LogFile     string
+	Scripts              []string
+	Hosts                []string // ssh://user:pass@host:port
+	PrivateKeyPath       string
+	PrivateKeyPassphrase string
+	WorkerLimit          int
+	LogFile              string
 }
 
 // Structured logger
@@ -30,14 +31,17 @@ var slogger *slog.Logger
 
 // HostTask encapsulates all information needed to process a host.
 type HostTask struct {
-	User           string
-	Host           string
-	Port           string
-	PrivateKey     string
-	ScriptContents map[string][]byte
-	Results        *sync.Map
-	WG             *sync.WaitGroup
-	Semaphore      chan struct{}
+	User                 string
+	Password             string
+	Host                 string
+	Port                 string
+	PrivateKeyPath       string
+	PrivateKeyPassphrase string
+	ScriptContents       map[string][]byte
+	Results              *sync.Map
+
+	wg        *sync.WaitGroup
+	semaphore chan struct{}
 }
 
 // InitLogger initializes structured logging with slog.
@@ -51,99 +55,19 @@ func InitLogger(logFile string) {
 	slogger = slog.New(slog.NewTextHandler(writer, nil))
 }
 
-// SSHClient wraps an SSH client and SFTP session.
-type SSHClient struct {
-	client *ssh.Client
-	sftp   *sftp.Client
-}
-
-// NewSSHClient establishes an SSH and SFTP connection.
-func NewSSHClient(user, host, port, privateKeyPath string) (*SSHClient, error) {
-	key, err := os.ReadFile(privateKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to read private key: %w", err)
-	}
-
-	signer, err := ssh.ParsePrivateKey(key)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse private key: %w", err)
-	}
-
-	config := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		//nolint:gosec
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
-	// TODO: remove after ConnStr is ready
-	if port == "" {
-		port = "22"
-	}
-
-	client, err := ssh.Dial("tcp", host+":"+port, config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to dial SSH: %w", err)
-	}
-
-	sftpClient, err := sftp.NewClient(client)
-	if err != nil {
-		client.Close()
-		return nil, fmt.Errorf("failed to create SFTP client: %w", err)
-	}
-
-	return &SSHClient{client: client, sftp: sftpClient}, nil
-}
-
-// Close closes SSH and SFTP connections.
-func (s *SSHClient) Close() {
-	s.sftp.Close()
-	s.client.Close()
-}
-
-// UploadScript uploads a script to the remote host from memory.
-func (s *SSHClient) UploadScript(scriptContent []byte, remotePath string) error {
-	dstFile, err := s.sftp.Create(remotePath)
-	if err != nil {
-		return fmt.Errorf("failed to create remote script: %w", err)
-	}
-	defer dstFile.Close()
-
-	_, err = dstFile.Write(scriptContent)
-	if err != nil {
-		return fmt.Errorf("failed to write script: %w", err)
-	}
-
-	return nil
-}
-
-// ExecuteScript executes a script on the remote host.
-func (s *SSHClient) ExecuteScript(remotePath string) (string, error) {
-	session, err := s.client.NewSession()
-	if err != nil {
-		return "", fmt.Errorf("failed to create SSH session: %w", err)
-	}
-	defer session.Close()
-
-	// TODO: `sudo` should be configured somehow
-	out, err := session.CombinedOutput(fmt.Sprintf("sudo chmod +x %s && sudo %s", remotePath, remotePath))
-	if err != nil {
-		return string(out), fmt.Errorf("failed to execute script: %w", err)
-	}
-
-	return string(out), nil
-}
-
 // ProcessHost handles script execution on a single host.
 func ProcessHost(task *HostTask) {
-	defer task.WG.Done()
-	task.Semaphore <- struct{}{}
-	defer func() { <-task.Semaphore }()
+	defer task.wg.Done()
+	task.semaphore <- struct{}{}
+	defer func() { <-task.semaphore }()
 
 	fmt.Printf("[HOST: %s] 🔄 Connecting...\n", task.Host)
-	client, err := NewSSHClient(task.User, task.Host, task.Port, task.PrivateKey)
+	client, err := rconf.NewSSHClient(connstr.ConnInfo{
+		User:     task.User,
+		Password: task.Password,
+		Host:     task.Host,
+		Port:     task.Port,
+	}, task.PrivateKeyPath, task.PrivateKeyPassphrase)
 	if err != nil {
 		slogger.Error("SSH connection failed", slog.String("host", task.Host), slog.Any("error", err))
 		fmt.Printf("[HOST: %s] ❌ SSH connection failed\n", task.Host)
@@ -212,17 +136,34 @@ func Run(cfg *Config) {
 	sem := make(chan struct{}, cfg.WorkerLimit)
 	results := &sync.Map{}
 
-	for _, host := range cfg.Hosts {
-		wg.Add(1)
-		task := &HostTask{
-			User:           cfg.User,
-			Host:           host,
-			PrivateKey:     cfg.PrivateKey,
-			ScriptContents: scriptContents,
-			Results:        results,
-			WG:             &wg,
-			Semaphore:      sem,
+	// prepare tasks
+
+	tasks := make([]*HostTask, 0, len(cfg.Hosts))
+	for _, connStr := range cfg.Hosts {
+		connInfo, err := connstr.ParseConnectionString(connStr)
+		if err != nil {
+			slogger.Error("Failed to read conninfo", slog.Any("error", err))
+			os.Exit(1)
 		}
+		task := &HostTask{
+			User:                 connInfo.User,
+			Password:             connInfo.Password,
+			Host:                 connInfo.Host,
+			Port:                 connInfo.Port,
+			PrivateKeyPath:       cfg.PrivateKeyPath,
+			PrivateKeyPassphrase: cfg.PrivateKeyPassphrase,
+			ScriptContents:       scriptContents,
+			Results:              results,
+			wg:                   &wg,
+			semaphore:            sem,
+		}
+		tasks = append(tasks, task)
+	}
+
+	// run tasks
+
+	for _, task := range tasks {
+		wg.Add(1)
 		go ProcessHost(task)
 	}
 
@@ -296,14 +237,19 @@ func main() {
 		},
 	}
 
-	rootCmd.Flags().StringVarP(&cfg.User, "user", "u", "", "SSH user (required)")
-	rootCmd.Flags().StringVarP(&cfg.PrivateKey, "key", "k", "", "Path to SSH private key (required)")
+	rootCmd.Flags().StringVarP(&cfg.PrivateKeyPath, "pkey", "i", "", "Path to SSH private key (required when pkey-auth is used)")
+	rootCmd.Flags().StringVarP(&cfg.PrivateKeyPassphrase, "pkey-pass", "", "", "Passphrase to SSH private key (required when pkey is password-protected)")
 	rootCmd.Flags().StringSliceVarP(&cfg.Scripts, "scripts", "s", nil, "List of script paths or directories (required)")
-	rootCmd.Flags().StringSliceVarP(&cfg.Hosts, "hosts", "H", nil, "List of remote hosts (required)")
+	rootCmd.Flags().StringSliceVarP(&cfg.Hosts, "hosts", "H", nil, strings.TrimSpace(`
+List of remote hosts (required)
+Format: username:password@host:port
+- password is optional
+- port is optional (default 22)
+`))
 	rootCmd.Flags().IntVarP(&cfg.WorkerLimit, "workers", "w", 2, "Max concurrent SSH connections")
 	rootCmd.Flags().StringVarP(&cfg.LogFile, "log", "l", "ssh_execution.log", "Log file path")
 
-	requiredFlags := []string{"user", "key", "scripts", "hosts"}
+	requiredFlags := []string{"scripts", "hosts"}
 	for _, flag := range requiredFlags {
 		if err := rootCmd.MarkFlagRequired(flag); err != nil {
 			fmt.Printf("Failed to mark '%s' flag as required: %v", flag, err)

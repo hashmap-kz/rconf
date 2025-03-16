@@ -51,24 +51,25 @@ chmod +x /usr/local/bin/rconf
 
 ```sh
 rconf \
-  --user myuser \
-  --key /path/to/private_key \
+  --pkey /path/to/private_key \
   --scripts /path/to/script1.sh,/path/to/script-dir/ \
-  --hosts 10.40.240.193,10.40.240.189 \
+  --hosts backup@10.40.240.193,myuser@10.40.240.189:2222 \
   --workers 5 \
   --log execution.log
 ```
 
 ### Flags
 
-| Flag        | Short | Description                                                    |
-|-------------|-------|----------------------------------------------------------------|
-| `--user`    | `-u`  | SSH username (required)                                        |
-| `--key`     | `-k`  | Path to SSH private key (required)                             |
-| `--scripts` | `-s`  | Comma-separated list of script paths or directories (required) |
-| `--hosts`   | `-H`  | Comma-separated list of remote hosts (required)                |
-| `--workers` | `-w`  | Maximum concurrent SSH connections (default: 2)                |
-| `--log`     | `-l`  | Log file path (default: `ssh_execution.log`)                   |
+| Flag          | Short | Description                                                              |
+|---------------|-------|--------------------------------------------------------------------------|
+| `--pkey`      | `-i`  | Path to SSH private key (required)                                       |
+| `--pkey-pass` |       | Passphrase to SSH private key (required when pkey is password-protected) |
+| `--scripts`   | `-s`  | Comma-separated list of script paths or directories (required)           |
+| `--hosts`     | `-H`  | Comma-separated list of remote hosts (required).                         |
+|               |       | Format: username:password@host:port.                                     |
+|               |       | Password and Port are optional                                           |
+| `--workers`   | `-w`  | Maximum concurrent SSH connections (default: 2)                          |
+| `--log`       | `-l`  | Log file path (default: `ssh_execution.log`)                             |
 
 ## How It Works
 
@@ -149,4 +150,5 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 - Parallel execution optimizations
 - Integration tests
 - github-actions (CI, release, etc...)
+- Collect scripts: files, directories (+ --recursive), URLs
 
