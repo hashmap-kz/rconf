@@ -3,6 +3,7 @@ package rconf
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/hashmap-kz/rconf/internal/connstr"
 	"github.com/pkg/sftp"
@@ -74,6 +75,11 @@ func getSigner(key []byte, passphrase string) (ssh.Signer, error) {
 // getAuthsMethods collects authentication with password or private_key+optional(passphrase)
 func getAuthsMethods(password, pkeyPath, pkeyPass string) ([]ssh.AuthMethod, error) {
 	var auths []ssh.AuthMethod
+
+	// should be password or private-key
+	if strings.TrimSpace(password) == "" && strings.TrimSpace(pkeyPath) == "" {
+		return nil, fmt.Errorf("both password and private-key-path are empty")
+	}
 
 	// password-based-auth
 

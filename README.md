@@ -148,9 +148,22 @@ All execution details, including errors, are logged to the specified log file (`
 
 ## Requirements
 
-- Go 1.18+
 - SSH access to remote hosts
 - Scripts must be shell scripts (`.sh`)
+
+---
+
+## Design notes
+
+The goal is to keep everything as simple as possible.
+
+If you have a bunch of shell scripts and need to run them on multiple remote hosts - whether or not you're using a CI/CD
+tool - rconf has you covered.
+
+No complex setup, no tricky configurations.
+
+Got a fleet of VMs and just need to tweak something across all of them? Skip the messy YAML and dependency
+headaches - just run your commands remotely with ease.
 
 ---
 
@@ -171,8 +184,8 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 - [V] Support for `ssh://user:pass@host:port` connection strings
 - [V] Support for password authentication
 - Configurable `sudo` behavior
-- Parallel execution optimizations
-- Integration tests
+- Parallel execution optimizations (retry/timeout/ctx, etc...)
+- [V]Integration tests
 - [V] github-actions (CI, release, etc...)
 - [V] Collect scripts: files, directories (+ --recursive), URLs
-
+- [V] Formatted output (host/port/user, etc...)
