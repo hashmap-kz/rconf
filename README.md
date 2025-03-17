@@ -68,7 +68,7 @@ brew install rconf
 
 ---
 
-## Usage
+## Usage (see examples directory)
 
 ```sh
 rconf \
