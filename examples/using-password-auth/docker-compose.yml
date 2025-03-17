@@ -1,0 +1,14 @@
+services:
+  vm1:
+    build: .
+    container_name: vm1
+    hostname: vm1
+    ports:
+      - "12222:22"
+
+  vm2:
+    build: .
+    container_name: vm2
+    hostname: vm2
+    ports:
+      - "12223:22"
