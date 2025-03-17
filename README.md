@@ -15,8 +15,8 @@
 
 - [Features](#features)
 - [Installation](#installation)
-    - [Manual Installation](#manual-installation)
-    - [Homebrew installation](#homebrew-installation)
+  - [Manual Installation](#manual-installation)
+  - [Homebrew installation](#homebrew-installation)
 - [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
@@ -84,7 +84,7 @@ rconf \
 ### Flags
 
 | Flag          | Short | Description                                                               |
-|---------------|-------|---------------------------------------------------------------------------|
+| ------------- | ----- | ------------------------------------------------------------------------- |
 | `--pkey`      | `-i`  | Path to SSH private key (required)                                        |
 | `--pkey-pass` |       | Passphrase to SSH private key (required when pkey is password-protected)  |
 | `--filename`  | `-f`  | Comma-separated list of script paths, directories or URL's (required)     |
@@ -95,6 +95,7 @@ rconf \
 | `--recursive` | `-R`  | "Process the directory used in -f, --filename recursively (default: true) |
 | `--workers`   | `-w`  | Maximum concurrent SSH connections (default: 2)                           |
 | `--log`       | `-l`  | Log file path (default: `ssh_execution.log`)                              |
+| `--version`   | `-v`  | Print version and exit                                                    |
 
 ## How It Works
 
