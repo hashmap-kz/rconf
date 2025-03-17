@@ -89,7 +89,7 @@ rconf \
 | `--pkey-pass` |       | Passphrase to SSH private key (required when pkey is password-protected)  |
 | `--filename`  | `-f`  | Comma-separated list of script paths, directories or URL's (required)     |
 | `--conn`      | `-H`  | Comma-separated list of remote hosts (required).                          |
-|               |       | Format: `username:password@host:port?key1=value1&key2=value2`             |
+|               |       | Format: `username:password@host:port?sudo=false&key2=value2`              |
 |               |       | Password and Port are optional                                            |
 |               |       | Query parameters are optional                                             |
 | `--recursive` | `-R`  | "Process the directory used in -f, --filename recursively (default: true) |
