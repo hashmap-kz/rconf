@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/hashmap-kz/rconf/internal/version"
 	"os"
 	"strings"
+
+	"github.com/hashmap-kz/rconf/internal/version"
 
 	"github.com/hashmap-kz/rconf/internal/cmd"
 	"github.com/hashmap-kz/rconf/internal/runner"
