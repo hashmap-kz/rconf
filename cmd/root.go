@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/hashmap-kz/rconf/internal/version"
 	"os"
 	"strings"
 
@@ -14,8 +15,9 @@ func Execute() error {
 	var cfg cmd.Config
 
 	rootCmd := &cobra.Command{
-		Use:   "rconf",
-		Short: "Execute local scripts on remote hosts via SSH",
+		Use:     "rconf",
+		Short:   "Execute local scripts on remote hosts via SSH",
+		Version: version.Version,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return runner.Run(&cfg)
 		},
