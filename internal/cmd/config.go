@@ -9,5 +9,4 @@ type Config struct {
 	WorkerLimit          int
 	LogFile              string
 	Recursive            bool
-	Version              string
 }
