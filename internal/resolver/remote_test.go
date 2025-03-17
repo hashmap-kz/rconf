@@ -1,4 +1,4 @@
-package remote
+package resolver
 
 import (
 	"fmt"

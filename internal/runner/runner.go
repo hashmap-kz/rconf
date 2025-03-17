@@ -9,11 +9,10 @@ import (
 	"strings"
 	"sync"
 
-	rconf "github.com/hashmap-kz/rconf/internal/client"
 	"github.com/hashmap-kz/rconf/internal/cmd"
 	"github.com/hashmap-kz/rconf/internal/connstr"
-	"github.com/hashmap-kz/rconf/internal/remote"
 	"github.com/hashmap-kz/rconf/internal/resolver"
+	rconf "github.com/hashmap-kz/rconf/internal/sshclient"
 )
 
 // Structured logger
@@ -25,6 +24,7 @@ type HostTask struct {
 	Password             string
 	Host                 string
 	Port                 string
+	Opts                 map[string][]string
 	PrivateKeyPath       string
 	PrivateKeyPassphrase string
 	ScriptContents       map[string][]byte
@@ -34,8 +34,73 @@ type HostTask struct {
 	semaphore chan struct{}
 }
 
-// InitLogger initializes structured logging with slog.
-func InitLogger(logFile string) {
+// Run executes scripts on multiple hosts with concurrency control.
+func Run(cfg *cmd.Config) error {
+	checkConfigDefaults(cfg)
+	initLogger(cfg.LogFile)
+
+	scriptContents, err := readScriptsIntoMemory(cfg.Filenames, cfg.Recursive)
+	if err != nil {
+		slogger.Error("Failed to read scripts", slog.Any("error", err))
+		return err
+	}
+
+	fmt.Println("\n🚀 Starting script execution...")
+
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, cfg.WorkerLimit)
+	results := &sync.Map{}
+
+	// prepare tasks
+
+	tasks := make([]*HostTask, 0, len(cfg.ConnStrings))
+	for _, connStr := range cfg.ConnStrings {
+		connInfo, err := connstr.ParseConnectionString(connStr)
+		if err != nil {
+			slogger.Error("Failed to read conn-info", slog.Any("error", err))
+			return err
+		}
+		task := &HostTask{
+			User:                 connInfo.User,
+			Password:             connInfo.Password,
+			Host:                 connInfo.Host,
+			Port:                 connInfo.Port,
+			Opts:                 connInfo.Opts,
+			PrivateKeyPath:       cfg.PrivateKeyPath,
+			PrivateKeyPassphrase: cfg.PrivateKeyPassphrase,
+			ScriptContents:       scriptContents,
+			Results:              results,
+			wg:                   &wg,
+			semaphore:            sem,
+		}
+		tasks = append(tasks, task)
+	}
+
+	// run tasks
+
+	for _, task := range tasks {
+		wg.Add(1)
+		go processHost(task)
+	}
+
+	wg.Wait()
+
+	printSummary(results)
+	return nil
+}
+
+// checkConfigDefaults checks and sets default values when they're empty
+func checkConfigDefaults(cfg *cmd.Config) {
+	if cfg.LogFile == "" {
+		cfg.LogFile = "rconf.log"
+	}
+	if cfg.WorkerLimit <= 0 {
+		cfg.WorkerLimit = 2
+	}
+}
+
+// initLogger initializes structured logging with slog.
+func initLogger(logFile string) {
 	file, err := os.OpenFile(logFile, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		fmt.Println("Failed to open log file:", err)
@@ -45,8 +110,8 @@ func InitLogger(logFile string) {
 	slogger = slog.New(slog.NewTextHandler(writer, nil))
 }
 
-// ProcessHost handles script execution on a single host.
-func ProcessHost(task *HostTask) {
+// processHost handles script execution on a single host.
+func processHost(task *HostTask) {
 	defer task.wg.Done()
 	task.semaphore <- struct{}{}
 	defer func() { <-task.semaphore }()
@@ -75,7 +140,7 @@ func ProcessHost(task *HostTask) {
 
 	for script, content := range task.ScriptContents {
 		remotePath := fmt.Sprintf("/tmp/%s", filepath.Base(script))
-		fmt.Printf("[HOST: %s] ⏳ Uploading %s...\n", hostInfoLog, script)
+		fmt.Printf("[HOST: %s] ⏳ Uploading %s...\n", hostInfoLog, filepath.ToSlash(script))
 
 		err := client.UploadScript(content, remotePath)
 		if err != nil {
@@ -84,26 +149,26 @@ func ProcessHost(task *HostTask) {
 				slog.String("script", script),
 				slog.Any("error", err),
 			)
-			fmt.Printf("[HOST: %s] ❌ Upload failed for %s\n", hostInfoLog, script)
+			fmt.Printf("[HOST: %s] ❌ Upload failed for %s\n", hostInfoLog, filepath.ToSlash(script))
 			failedScripts = append(failedScripts, script)
 			continue
 		}
 
-		fmt.Printf("[HOST: %s] 🚀 Executing %s...\n", hostInfoLog, script)
-		output, err := client.ExecuteScript(remotePath)
+		fmt.Printf("[HOST: %s] 🚀 Executing %s...\n", hostInfoLog, filepath.ToSlash(script))
+		output, err := client.ExecuteScript(remotePath, task.Opts)
 		if err != nil {
 			slogger.Error("Execution failed",
 				slog.String("host", hostInfoLog),
-				slog.String("script", script),
+				slog.String("script", filepath.ToSlash(script)),
 				slog.Any("error", err),
 				slog.String("output", output),
 			)
-			fmt.Printf("[HOST: %s] ❌ Execution failed for %s\n", hostInfoLog, script)
-			failedScripts = append(failedScripts, script)
+			fmt.Printf("[HOST: %s] ❌ Execution failed for %s\n", hostInfoLog, filepath.ToSlash(script))
+			failedScripts = append(failedScripts, filepath.ToSlash(script))
 			continue
 		}
 
-		fmt.Printf("[HOST: %s] ✅ Successfully executed %s\n", hostInfoLog, script)
+		fmt.Printf("[HOST: %s] ✅ Successfully executed %s\n", hostInfoLog, filepath.ToSlash(script))
 	}
 
 	if len(failedScripts) > 0 {
@@ -113,71 +178,8 @@ func ProcessHost(task *HostTask) {
 	}
 }
 
-func checkConfigDefaults(cfg *cmd.Config) {
-	if cfg.LogFile == "" {
-		cfg.LogFile = "rconf.log"
-	}
-	if cfg.WorkerLimit <= 0 {
-		cfg.WorkerLimit = 2
-	}
-}
-
-// Run executes scripts on multiple hosts with concurrency control.
-func Run(cfg *cmd.Config) error {
-	checkConfigDefaults(cfg)
-	InitLogger(cfg.LogFile)
-
-	scriptContents, err := ReadScriptsIntoMemory(cfg.Filenames, cfg.Recursive)
-	if err != nil {
-		slogger.Error("Failed to read scripts", slog.Any("error", err))
-		return err
-	}
-
-	fmt.Println("\n🚀 Starting script execution...")
-
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, cfg.WorkerLimit)
-	results := &sync.Map{}
-
-	// prepare tasks
-
-	tasks := make([]*HostTask, 0, len(cfg.ConnStrings))
-	for _, connStr := range cfg.ConnStrings {
-		connInfo, err := connstr.ParseConnectionString(connStr)
-		if err != nil {
-			slogger.Error("Failed to read conninfo", slog.Any("error", err))
-			return err
-		}
-		task := &HostTask{
-			User:                 connInfo.User,
-			Password:             connInfo.Password,
-			Host:                 connInfo.Host,
-			Port:                 connInfo.Port,
-			PrivateKeyPath:       cfg.PrivateKeyPath,
-			PrivateKeyPassphrase: cfg.PrivateKeyPassphrase,
-			ScriptContents:       scriptContents,
-			Results:              results,
-			wg:                   &wg,
-			semaphore:            sem,
-		}
-		tasks = append(tasks, task)
-	}
-
-	// run tasks
-
-	for _, task := range tasks {
-		wg.Add(1)
-		go ProcessHost(task)
-	}
-
-	wg.Wait()
-
-	PrintSummary(results)
-	return nil
-}
-
-// PrintSummary prints the execution results in a well-formatted table using tabwriter.
-func PrintSummary(results *sync.Map) {
+// printSummary prints the execution results in a well-formatted table using tabwriter.
+func printSummary(results *sync.Map) {
 	fmt.Println("\n=== Execution Summary ===")
 
 	// Iterate over results and print each row
@@ -187,8 +189,8 @@ func PrintSummary(results *sync.Map) {
 	})
 }
 
-// ReadScriptsIntoMemory reads all scripts (including from directories) before execution and stores their contents.
-func ReadScriptsIntoMemory(scriptPaths []string, recursive bool) (map[string][]byte, error) {
+// readScriptsIntoMemory reads all scripts (including from directories) before execution and stores their contents.
+func readScriptsIntoMemory(scriptPaths []string, recursive bool) (map[string][]byte, error) {
 	scriptContents := make(map[string][]byte)
 
 	files, err := resolver.ResolveAllFiles(scriptPaths, recursive)
@@ -197,7 +199,7 @@ func ReadScriptsIntoMemory(scriptPaths []string, recursive bool) (map[string][]b
 	}
 	for _, f := range files {
 		if resolver.IsURL(f) {
-			data, err := remote.ReadRemoteFileContent(f)
+			data, err := resolver.ReadRemoteFileContent(f)
 			if err != nil {
 				return nil, err
 			}

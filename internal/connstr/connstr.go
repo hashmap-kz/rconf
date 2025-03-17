@@ -12,6 +12,7 @@ type ConnInfo struct {
 	Password string
 	Host     string
 	Port     string
+	Opts     map[string][]string
 }
 
 // ParseConnectionString parses the connection string using the `net/url` package
@@ -59,5 +60,6 @@ func ParseConnectionString(connStr string) (*ConnInfo, error) {
 		Password: password,
 		Host:     hostName,
 		Port:     port,
+		Opts:     u.Query(),
 	}, nil
 }
