@@ -75,7 +75,7 @@ rconf \
   --pkey /path/to/private_key \
   --filename /path/to/script1.sh,/path/to/script-dir/ \
   --filename https://shared.company.com/path/to/script.sh \
-  --conn backup@10.40.240.193 \
+  --conn backup@10.40.240.193?sudo=false \
   --conn myuser@10.40.240.189:2222 \
   --workers 5 \
   --log execution.log
@@ -89,8 +89,9 @@ rconf \
 | `--pkey-pass` |       | Passphrase to SSH private key (required when pkey is password-protected)  |
 | `--filename`  | `-f`  | Comma-separated list of script paths, directories or URL's (required)     |
 | `--conn`      | `-H`  | Comma-separated list of remote hosts (required).                          |
-|               |       | Format: `username:password@host:port`                                     |
+|               |       | Format: `username:password@host:port?key1=value1&key2=value2`             |
 |               |       | Password and Port are optional                                            |
+|               |       | Query parameters are optional                                             |
 | `--recursive` | `-R`  | "Process the directory used in -f, --filename recursively (default: true) |
 | `--workers`   | `-w`  | Maximum concurrent SSH connections (default: 2)                           |
 | `--log`       | `-l`  | Log file path (default: `ssh_execution.log`)                              |

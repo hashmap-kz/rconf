@@ -23,7 +23,7 @@ func TestParseConnectionString(t *testing.T) {
 			name:  "Valid single connection with explicit scheme",
 			input: "ssh://user:pass@host:2222",
 			want: &ConnInfo{
-				User: "user", Password: "pass", Host: "host", Port: "2222",
+				User: "user", Password: "pass", Host: "host", Port: "2222", Opts: map[string][]string{},
 			},
 			wantErr: false,
 		},
@@ -31,7 +31,7 @@ func TestParseConnectionString(t *testing.T) {
 			name:  "Valid single connection without scheme",
 			input: "user:pass@host:2222",
 			want: &ConnInfo{
-				User: "user", Password: "pass", Host: "host", Port: "2222",
+				User: "user", Password: "pass", Host: "host", Port: "2222", Opts: map[string][]string{},
 			},
 			wantErr: false,
 		},
@@ -39,7 +39,7 @@ func TestParseConnectionString(t *testing.T) {
 			name:  "Valid single connection without password",
 			input: "user@host:2222",
 			want: &ConnInfo{
-				User: "user", Password: "", Host: "host", Port: "2222",
+				User: "user", Password: "", Host: "host", Port: "2222", Opts: map[string][]string{},
 			},
 			wantErr: false,
 		},
@@ -47,7 +47,11 @@ func TestParseConnectionString(t *testing.T) {
 			name:  "Valid single connection without port",
 			input: "user:pass@host",
 			want: &ConnInfo{
-				User: "user", Password: "pass", Host: "host", Port: "22", // Default SSH port
+				User:     "user",
+				Password: "pass",
+				Host:     "host",
+				Port:     "22", // Default SSH port
+				Opts:     map[string][]string{},
 			},
 			wantErr: false,
 		},

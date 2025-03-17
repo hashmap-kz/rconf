@@ -24,6 +24,7 @@ type HostTask struct {
 	Password             string
 	Host                 string
 	Port                 string
+	Opts                 map[string][]string
 	PrivateKeyPath       string
 	PrivateKeyPassphrase string
 	ScriptContents       map[string][]byte
@@ -64,6 +65,7 @@ func Run(cfg *cmd.Config) error {
 			Password:             connInfo.Password,
 			Host:                 connInfo.Host,
 			Port:                 connInfo.Port,
+			Opts:                 connInfo.Opts,
 			PrivateKeyPath:       cfg.PrivateKeyPath,
 			PrivateKeyPassphrase: cfg.PrivateKeyPassphrase,
 			ScriptContents:       scriptContents,
@@ -153,7 +155,7 @@ func processHost(task *HostTask) {
 		}
 
 		fmt.Printf("[HOST: %s] 🚀 Executing %s...\n", hostInfoLog, filepath.ToSlash(script))
-		output, err := client.ExecuteScript(remotePath)
+		output, err := client.ExecuteScript(remotePath, task.Opts)
 		if err != nil {
 			slogger.Error("Execution failed",
 				slog.String("host", hostInfoLog),

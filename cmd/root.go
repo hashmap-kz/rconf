@@ -29,9 +29,10 @@ func Execute() error {
 	rootCmd.Flags().StringSliceVarP(&cfg.Filenames, "filename", "f", nil, "List of script paths or directories (required)")
 	rootCmd.Flags().StringSliceVarP(&cfg.ConnStrings, "conn", "H", nil, strings.TrimSpace(`
 List of remote hosts (required)
-Format: username:password@host:port
+Format: username:password@host:port?key1=value1&key2=value2
 - password is optional
 - port is optional (default 22)
+- query-opts are optional (available: sudo)
 `))
 	rootCmd.Flags().IntVarP(&cfg.WorkerLimit, "workers", "w", 2, "Max concurrent SSH connections")
 	rootCmd.Flags().StringVarP(&cfg.LogFile, "log", "l", "rconf.log", "Log file path")

@@ -119,18 +119,35 @@ func (s *SSHClient) UploadScript(scriptContent []byte, remotePath string) error 
 }
 
 // ExecuteScript executes a script on the remote host.
-func (s *SSHClient) ExecuteScript(remotePath string) (string, error) {
+func (s *SSHClient) ExecuteScript(remotePath string, opts map[string][]string) (string, error) {
 	session, err := s.client.NewSession()
 	if err != nil {
 		return "", fmt.Errorf("failed to create SSH session: %w", err)
 	}
 	defer session.Close()
 
-	// TODO: `sudo` should be configured somehow
-	out, err := session.CombinedOutput(fmt.Sprintf("sudo chmod +x %s && sudo %s", remotePath, remotePath))
+	cmd := fmt.Sprintf("sudo chmod +x %s && sudo %s", remotePath, remotePath)
+	if hasOpt(opts, "sudo", "false") {
+		cmd = fmt.Sprintf("chmod +x %s && %s", remotePath, remotePath)
+	}
+
+	out, err := session.CombinedOutput(cmd)
 	if err != nil {
 		return string(out), fmt.Errorf("failed to execute script: %w", err)
 	}
 
 	return string(out), nil
+}
+
+// internal
+
+func hasOpt(opts map[string][]string, k, v string) bool {
+	if val, exists := opts[k]; exists {
+		for _, elem := range val {
+			if elem == v {
+				return true
+			}
+		}
+	}
+	return false
 }
