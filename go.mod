@@ -1,9 +1,8 @@
 module github.com/hashmap-kz/rconf
 
 go 1.24.0
-
 require (
-	github.com/pkg/sftp v1.13.8
+	github.com/pkg/sftp v1.13.9
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.36.0
